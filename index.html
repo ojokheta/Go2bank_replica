@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>G02bank — Mobile Banking</title>
+  <meta name="description" content="G02bank online banking interface." />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #11183a;
+      --panel-2: #0f1533;
+      --text: #e9ecff;
+      --muted: #9aa3ff;
+      --accent: #6c7cff;
+      --good: #35d07f;
+      --bad: #ff6b6b;
+      --border: #222a5a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text); background: radial-gradient(1200px 800px at 20% -10%, #18206a, transparent), var(--bg);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .card { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .row { display: grid; gap: 16px; }
+    .row.cols-2 { grid-template-columns: 1.1fr .9fr; }
+    .row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .btn { appearance: none; border: 1px solid var(--border); background: #1a2270; color: var(--text); padding: 12px 14px; border-radius: 10px; cursor: pointer; }
+    .btn.primary { background: linear-gradient(180deg, #7a86ff, #5c69ff); color: #0b1020; border: none; font-weight: 700; }
+    .btn.ghost { background: transparent; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .input { width: 100%; background: #0e1440; border: 1px solid var(--border); color: var(--text); padding: 12px 14px; border-radius: 10px; }
+    .muted { color: var(--muted); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #0f1533; border: 1px solid var(--border); }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+    header .brand { display: flex; align-items: center; gap: 10px; }
+    header .logo { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #7a86ff, #35d07f); }
+    footer { opacity: .7; padding: 16px 0; text-align: center; }
+    /* Login */
+    .login-wrap { min-height: calc(100% - 48px); display: grid; place-items: center; }
+    .login { max-width: 420px; width: 100%; }
+    /* Dashboard */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .balance { font-size: 36px; font-weight: 800; letter-spacing: .4px; }
+    .stat { padding: 16px; }
+    .stat h4 { margin: 0 0 6px; font-weight: 600; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: 12px; border-bottom: 1px solid var(--border); }
+    .table th { text-align: left; font-weight: 600; color: var(--muted); }
+    .table tr:hover { background: rgba(255,255,255,.03); }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: #0f1533; cursor: pointer; }
+    .pill.active { background: #1a2270; }
+    .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+    @media (max-width: 900px) { .row.cols-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <template id="login-view">
+    <div class="login-wrap">
+      <div class="card login container">
+        <header>
+          <div class="brand"><div class="logo"></div><strong>G02bank</strong></div>
+          <span class="badge"> •Welcome User.</span>
+        </header>
+        <h2>Sign in</h2>
+        <p class="muted">Sign in to continue.</p>
+        <div class="row">
+          <input class="input" id="email" placeholder="Email" autocomplete="username" />
+          <input class="input" id="password" type="password" placeholder="Password" autocomplete="current-password" />
+          <button class="btn primary" id="loginBtn">Continue</button>
+        </div>
+        <p class="muted" id="loginError" style="display:none; margin-top:10px; color: var(--bad);">Incorrect email or password.</p>
+      </div>
+    </div>
+  </template>
+
+  <template id="dashboard-view">
+    <div class="container">
+      <header class="topbar">
+        <div class="brand"><div class="logo"></div><strong>G02bank</strong></div>
+        <div class="filters">
+          <span class="badge">Balance</span>
+          <span class="badge">USD</span>
+          <button class="btn ghost" id="logout">Log out</button>
+        </div>
+      </header>
+
+      <div class="row cols-3">
+        <div class="card stat">
+          <h4>Available balance</h4>
+          <div class="balance" id="balance"></div>
+          <div class="muted">As of today</div>
+        </div>
+        </div>
+        <div class="card stat">
+          <h4>Total inflow</h4>
+          <div class="balance good" id="inflow"></div>
+        </div>
+        <div class="card stat" style=margin-top:7px>
+          <h4>Total outflow</h4>
+          <div class="balance bad" id="outflow"></div>
+        </div>
+      </div>
+
+      <div class="row cols-2" style="margin-top:16px">
+        <div class="card">
+          <div class="container">
+            <h3>Transaction history</h3>
+            <div class="filters">
+              <span class="pill active" data-filter="all">All</span>
+              <span class="pill" data-filter="in">Credits</span>
+              <span class="pill" data-filter="out">Debits</span>
+              <input class="input" id="search" placeholder="Search description" />
+            </div>
+            <table class="table" id="table"></table>
+            <div class="pager">
+              <button class="btn" id="prev">Prev</button>
+              <span class="muted" id="pageInfo"></span>
+              <button class="btn" id="next">Next</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="container">
+            <h3>Account overview</h3>
+            <p class="muted">Manage your profile, security, and transaction history.</p>
+            <ul class="muted">
+              <li>Instant notifications</li>
+              <li>Spending insights</li>
+              <li>Secure sign-in</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <footer class="muted">© G02bank</footer>
+    </div>
+  </template>
+
+  <script>
+    const app = document.getElementById('app');
+    const fmt = n => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const DEMO_EMAIL = 'Fafoconstruction23@gmail.com';
+    const DEMO_PASSWORD = 'Lancalot78!';
+
+    // --- Deterministic mock data generation (reconciles exactly) ---
+    const TARGET_BALANCE = 47312.65;
+    const START = new Date('2022-01-01');
+    const END = new Date('2024-12-31');
+    const RNG = (seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647)(123456);
+
+    function generateTransactions() {
+      const tx = [];
+      let inflow = 0, outflow = 0;
+      const merchants = ['Payroll', 'Client Transfer', 'Invoice Settlement', 'Utilities', 'Card Purchase', 'Wire Transfer', 'Refund', 'Subscription'];
+      const days = Math.floor((END - START) / 86400000);
+      const count = 420; // active over years
+      for (let i = 0; i < count; i++) {
+        const d = new Date(START.getTime() + Math.floor(RNG() * days) * 86400000);
+        const isIn = RNG() > 0.48;
+        let amt = Math.round((RNG() * 9500 + 50) * 100) / 100;
+        if (isIn) inflow += amt; else outflow += amt;
+        tx.push({ date: d, type: isIn ? 'in' : 'out', amount: amt, desc: merchants[Math.floor(RNG() * merchants.length)] });
+      }
+      // Reconcile exactly to target balance by final adjustment
+      const delta = Math.round(((inflow - outflow) - TARGET_BALANCE) * 100) / 100;
+      if (delta !== 0) {
+        // add one correcting transaction
+        const isIn = delta < 0; // need more inflow if negative
+        const amt = Math.abs(delta);
+        if (isIn) inflow += amt; else outflow += amt;
+        tx.push({ date: END, type: isIn ? 'in' : 'out', amount: amt, desc: 'Reconciliation Adjustment' });
+      }
+      // Ensure > $4M throughput
+      if (inflow + outflow < 4_000_000) {
+        const boost = Math.ceil((4_000_000 - (inflow + outflow)) / 2 / 100) * 100;
+        inflow += boost; outflow += boost;
+        tx.push({ date: new Date('2023-06-30'), type: 'in', amount: boost, desc: 'Volume Adjustment' });
+        tx.push({ date: new Date('2023-07-01'), type: 'out', amount: boost, desc: 'Volume Adjustment' });
+      }
+      tx.sort((a,b)=>b.date-a.date);
+      return { tx, inflow, outflow };
+    }
+
+    const state = { page: 1, perPage: 12, filter: 'all', q: '' };
+    const data = generateTransactions();
+
+    function renderLogin() {
+      app.innerHTML = document.getElementById('login-view').innerHTML;
+      const email = document.getElementById('email');
+      const password = document.getElementById('password');
+      const err = document.getElementById('loginError');
+      const attempt = () => {
+        const ok = email.value.trim().toLowerCase() === DEMO_EMAIL.toLowerCase() && password.value === DEMO_PASSWORD;
+        if (!ok) {
+          err.style.display = 'block';
+          return;
+        }
+        err.style.display = 'none';
+        renderDashboard();
+      };
+      document.getElementById('loginBtn').onclick = attempt;
+      password.addEventListener('keydown', (e) => { if (e.key === 'Enter') attempt(); });
+    }
+
+    function renderDashboard() {
+      app.innerHTML = document.getElementById('dashboard-view').innerHTML;
+      document.getElementById('balance').textContent = fmt(TARGET_BALANCE);
+      document.getElementById('inflow').textContent = fmt(data.inflow);
+      document.getElementById('outflow').textContent = fmt(data.outflow);
+      document.getElementById('logout').onclick = renderLogin;
+      document.querySelectorAll('.pill').forEach(p => p.onclick = () => { document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active')); p.classList.add('active'); state.filter = p.dataset.filter; state.page = 1; drawTable(); });
+      document.getElementById('search').oninput = e => { state.q = e.target.value.toLowerCase(); state.page = 1; drawTable(); };
+      document.getElementById('prev').onclick = () => { if (state.page>1){ state.page--; drawTable(); }};
+      document.getElementById('next').onclick = () => { state.page++; drawTable(); };
+      drawTable();
+    }
+
+    function drawTable() {
+      const table = document.getElementById('table');
+      let rows = data.tx.filter(t => state.filter==='all' || t.type===state.filter)
+                        .filter(t => !state.q || t.desc.toLowerCase().includes(state.q));
+      const pages = Math.max(1, Math.ceil(rows.length / state.perPage));
+      state.page = Math.min(state.page, pages);
+      const slice = rows.slice((state.page-1)*state.perPage, state.page*state.perPage);
+      table.innerHTML = `<tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr>` + slice.map(t => `
+        <tr>
+          <td>${t.date.toISOString().slice(0,10)}</td>
+          <td>${t.desc}</td>
+          <td class="${t.type==='in'?'good':'bad'}">${t.type==='in'?'Credit':'Debit'}</td>
+          <td class="${t.type==='in'?'good':'bad'}">${fmt(t.amount)}</td>
+        </tr>`).join('');
+      document.getElementById('pageInfo').textContent = `Page ${state.page} / ${pages}`;
+    }
+
+    renderLogin();
+  </script>
+</body>
+</html>
